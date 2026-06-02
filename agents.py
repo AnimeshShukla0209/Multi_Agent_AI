@@ -1,9 +1,9 @@
-from langchain.agents import create_agent
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser  
 from tools import web_search, scrape_url
 import os
+from langchain.agents import create_react_agent
 from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 
@@ -15,13 +15,13 @@ writer_llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0, api_key=os
 
 #First Agent
 def build_search_agent():
-    return create_agent(
+    return create_react_agent(
         model=agent_llm,
         tools=[web_search],
     )
 
 def build_reader_agent():
-    return create_agent(
+    return create_react_agent(
         model=writer_llm,
         tools=[scrape_url],
     )
