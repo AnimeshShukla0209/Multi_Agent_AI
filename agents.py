@@ -9,18 +9,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0, api_key=os.getenv("GROQ_API_KEY"))
+agent_llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0, api_key=os.getenv("GROQ_API_KEY"))
+writer_llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0, api_key=os.getenv("GROQ_API_KEY"))
+
 
 #First Agent
 def build_search_agent():
     return create_agent(
-        model=llm,
+        model=agent_llm,
         tools=[web_search],
     )
 
 def build_reader_agent():
     return create_agent(
-        model=llm,
+        model=writer_llm,
         tools=[scrape_url],
     )
 
@@ -42,7 +44,7 @@ Structure the report as:
 Be detailed, factual and professional."""),
 ])
 
-writer_chain = writer_prompt | llm | StrOutputParser()
+writer_chain = writer_prompt | writer_llm | StrOutputParser()
 
 #critic_chain 
 
@@ -69,4 +71,4 @@ One line verdict:
 ..."""),
 ])
 
-critic_chain = critic_prompt | llm | StrOutputParser()
+critic_chain = critic_prompt | agent_llm | StrOutputParser()
