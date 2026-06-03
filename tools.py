@@ -3,37 +3,48 @@ import requests
 from bs4 import BeautifulSoup
 from tavily import TavilyClient
 import os
+import time
 from dotenv import load_dotenv
 from rich import print
 load_dotenv()
 
-# run using uv pip install -r requirements.txt
-
-tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
-
 @tool
 def web_search(query: str) -> str:
-    """Search the web for the recent and realiable information on reliable sources on a topic. Return Titles, URLs and descriptions of the top 5 results."""
-    results = tavily_client.search(query=query, max_results=5)
+    """Search the web for recent and reliable information on a topic. Returns titles, URLs and descriptions of top 5 results."""
+    
+    max_retries = 3
 
-    out = []
-
-    for r in results['results']:
-        out.append(
-            f"Title: {r['title']}\nURL: {r['url']}\nSnippet: {r['content'][:300]}\n"
-        )
-
-    return "\n----\n".join(out)
+    for attempt in range(max_retries):
+        try:
+            client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+            results = client.search(query=query, max_results=5)
+            out = []
+            for r in results['results']:
+                out.append(
+                    f"Title: {r['title']}\nURL: {r['url']}\nSnippet: {r['content'][:300]}\n"
+                )
+            return "\n----\n".join(out)
+        except Exception as e:
+            if attempt < max_retries - 1:
+                time.sleep(2 * (attempt + 1))
+            else:
+                return f"Search failed after {max_retries} attempts: {str(e)}"
 
 @tool
 def scrape_url(url: str) -> str:
     """Scrape and return clean text content from a given URL for deeper reading."""
-    try:
-        resp = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
-        soup = BeautifulSoup(resp.text, "html.parser")
-        for tag in soup(["script", "style", "nav", "footer"]):
-            tag.decompose()
-        return soup.get_text(separator=" ", strip=True)[:3000]
-    except Exception as e:
-        return f"Could not scrape URL: {str(e)}"
+    
+    max_retries = 3
 
+    for attempt in range(max_retries):
+        try:
+            resp = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+            soup = BeautifulSoup(resp.text, "html.parser")
+            for tag in soup(["script", "style", "nav", "footer"]):
+                tag.decompose()
+            return soup.get_text(separator=" ", strip=True)[:3000]
+        except Exception as e:
+            if attempt < max_retries - 1:
+                time.sleep(2 * (attempt + 1))
+            else:
+                return f"Could not scrape URL after {max_retries} attempts: {str(e)}"
